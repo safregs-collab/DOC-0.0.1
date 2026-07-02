@@ -1,102 +1,100 @@
-// Файл: MainScreen.kt
+package com.example.medstudentapp
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.example.medstudentapp.ui.screens.FeedScreen
+import com.example.medstudentapp.ui.screens.ProfileScreen
+import com.example.medstudentapp.ui.screens.ScheduleScreen
+import com.example.medstudentapp.ui.screens.TestsScreen
+import com.example.medstudentapp.ui.theme.MedStudentAppTheme
 
-// Модель данных для карточек на главном экране
-data class MainMenuItem(
-    val title: String,
-    val icon: ImageVector,
-    val onClick: () -> Unit
-)
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            // Определяем текущую тему. По умолчанию используется темная тема.
+            val useDarkTheme = isSystemInDarkTheme()
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun MainScreen(navController: NavController) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(text = "МедПортал", fontWeight = FontWeight.Bold) },
-                actions = {
-                    IconButton(onClick = { /* Переход в профиль */ }) {
-                        Icon(Icons.Default.Person, contentDescription = "Профиль")
-                    }
-                }
-            )
-        },
-        bottomBar = {
-            NavigationBar {
-                // Элементы нижней навигации
-                NavigationBarItem(
-                    selected = true,
-                    onClick = { /* Оставаться на главном экране */ },
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Главная") },
-                    label = { Text("Главная") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = { navController.navigate("chat") },
-                    icon = { Icon(Icons.Default.Chat, contentDescription = "Чат") },
-                    label = { Text("Чат") }
-                )
-            }
-        }
-    ) { innerPadding ->
-        // Контент главного экрана с отступами от Scaffold
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            val menuItems = listOf(
-                MainMenuItem("Приемы", Icons.Default.CalendarToday) {
-                    navController.navigate("appointments")
-                },
-                MainMenuItem("История болезней", Icons.Default.History) {
-                    navController.navigate("medical_history")
-                },
-                MainMenuItem("Медкарта", Icons.Default.Folder) {
-                    navController.navigate("medical_card")
-                }
-            )
-            items(menuItems) { item ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = item.onClick
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = item.icon,
-                            contentDescription = item.title,
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(text = item.title, style = MaterialTheme.typography.titleMedium)
-                        Spacer(modifier = Modifier.weight(1f))
-                        Icon(Icons.Default.ArrowForward, contentDescription = "Далее")
-                    }
+            MedStudentAppTheme(darkTheme = useDarkTheme) {
+                // Scaffold предоставляет базовую структуру Material Design: TopAppBar, BottomBar, FAB.
+                Scaffold(
+                    bottomBar = { BottomNavigationBar() }
+                ) { innerPadding ->
+                    // Навигационный граф управляет переходами между экранами.
+                    AppNavigation(modifier = innerPadding)
                 }
             }
         }
     }
+}
+
+// Навигационный граф приложения
+@Composable
+fun AppNavigation(modifier: PaddingValues) {
+    val navController = rememberNavController()
+    NavHost(
+        navController = navController,
+        startDestination = "feed",
+        modifier = modifier
+    ) {
+        composable("feed") { FeedScreen(navController) }
+        composable("schedule") { ScheduleScreen(navController) }
+        composable("tests") { TestsScreen(navController) }
+        composable("profile") { ProfileScreen(navController) }
+    }
+}
+
+// Нижняя панель навигации
+@Composable
+fun BottomNavigationBar() {
+    val items = listOf(
+        Screen.Feed,
+        Screen.Schedule,
+        Screen.Tests,
+        Screen.Profile
+    )
+    val navController = rememberNavController()
+
+    NavigationBar {
+        items.forEach { screen ->
+            NavigationBarItem(
+                icon = {
+                    Icon(
+                        imageVector = screen.icon,
+                        contentDescription = stringResource(id = screen.resourceId)
+                    )
+                },
+                label = { Text(stringResource(id = screen.resourceId)) },
+                selected = navController.currentDestination?.route == screen.route,
+                onClick = {
+                    navController.navigate(screen.route) {
+                        // Pop up to the start destination to avoid building up a large stack
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        // Avoid multiple copies of the same destination when reselecting
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            )
+        }
+    }
+}
+
+// Объекты для описания экранов навигации
+sealed class Screen(val route: String, val resourceId: Int, val icon: ImageVector) {
+    object Feed : Screen("feed", R.string.feed, Icons.Default.Home)
+    object Schedule : Screen("schedule", R.string.schedule, Icons.Default.CalendarMonth)
+    object Tests : Screen("tests", R.string.tests, Icons.Default.Assignment)
+    object Profile : Screen("profile", R.string.profile, Icons.Default.Person)
 }
