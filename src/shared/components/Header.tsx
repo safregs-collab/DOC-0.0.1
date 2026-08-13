@@ -7,7 +7,7 @@ export function Header() {
 
   useEffect(() => {
     const saved = localStorage.getItem('mg_theme');
-    const isDark = saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const isDark = saved ? saved === 'dark' : true; // по умолчанию тёмная тема
     setDark(isDark);
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
   }, []);
