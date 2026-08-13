@@ -1,11 +1,10 @@
 const CACHE_NAME = 'mediguess-v1';
+const BASE = '/doc-0.0.1';
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/src/main.tsx',
-  '/style.css',
-  '/data/cases.json',
-  '/data/roleplayCases.json',
+  BASE + '/',
+  BASE + '/index.html',
+  BASE + '/data/cases.json',
+  BASE + '/data/roleplayCases.json',
 ];
 
 self.addEventListener('install', (event) => {
@@ -46,9 +45,8 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          // Fallback для HTML при офлайн
           if (event.request.mode === 'navigate') {
-            return caches.match('/index.html');
+            return caches.match(BASE + '/index.html');
           }
         });
     })
